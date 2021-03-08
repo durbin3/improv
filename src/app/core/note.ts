@@ -1,4 +1,9 @@
 
+import Vex from 'vexflow';
+import * as Tonejs from 'tone'
+
+
+
 
 function lcm(x:number,y:number) {
   return (!x || !y) ? 0 : (x * y) / gcd(x, y);
@@ -57,7 +62,7 @@ export class ToneDesignation {
     name = name.replace(/\s+/g, '').toLowerCase()
     var sharped = true;
     if (name.length==0) throw new Error('unrecognized tone');
-    var toneindex = ({'a':0,'b':2,'c':3,'d':5,'e':7,'f':8,'g':10} as Record<string,number>)[name[0]];
+    var toneindex = ({'c':0,'d':2,'e':4,'f':5,'g':7,'a':9,'b':11} as Record<string,number>)[name[0]];
     if (toneindex==undefined || name.length>2) throw new Error('unrecognized tone');
     if (name.length==2) {
       if (name[1]=='#') toneindex++;
@@ -68,9 +73,24 @@ export class ToneDesignation {
     }
     return new ToneDesignation(toneindex,sharped);
   }
-  toString() : string {
-    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][this.value%12]
-    else              return ['a','b@','b','c','d@','d','e@','e','f','g@','g','a@'][this.value%12]
+  toString(key?:Key) : string {
+    var defaultTones : Record<number,string> = {0:'C',2:'D',4:'E',5:'F',7:'G',9:'A',11:'B'};
+    var tonedict = key==null?defaultTones:key.get_implicit_tones();
+    if (tonedict[this.value%12]!=undefined) return tonedict[this.value%12];
+    if (defaultTones[this.value%12]!=undefined) return defaultTones[this.value%12]+'n';
+    var tryval = this.value%12
+    var accidentals = "";
+    while (tonedict[tryval%12]==undefined) {
+      if (this.sharped) {
+        tryval = (tryval+11)%12;
+        accidentals = accidentals+"#";
+      }
+      else {
+        tryval = (tryval+1)%12;
+        accidentals = accidentals+"b";
+      }
+    }
+    return tonedict[tryval%12]+accidentals
   }
 }
 
@@ -97,9 +117,24 @@ export class Tone {
     name = name.replace(/\d+/g,'')
     return ToneDesignation.fromString(name).inOctave(blah==null?4:(+blah));
   }
-  toString() : string {
-    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][this.value%12]+Math.floor(this.value/12).toString()
-    else              return ['a','b@','b','c','d@','d','e@','e','f','g@','g','a@'][this.value%12]+Math.floor(this.value/12).toString()
+  toString(key?:Key) : string {
+    var defaultTones : Record<number,string> = {0:'C',2:'D',4:'E',5:'F',7:'G',9:'A',11:'B'};
+    var tonedict = key==null?defaultTones:key.get_implicit_tones();
+    if (tonedict[this.value%12]!=undefined) return tonedict[this.value%12]+Math.floor(this.value/12).toString();
+    if (defaultTones[this.value%12]!=undefined) return defaultTones[this.value%12]+'n'+Math.floor(this.value/12).toString();
+    var tryval = this.value%12
+    var accidentals = "";
+    while (tonedict[tryval%12]==undefined) {
+      if (this.sharped) {
+        tryval = (tryval+11)%12;
+        accidentals = accidentals+"#";
+      }
+      else {
+        tryval = (tryval+1)%12;
+        accidentals = accidentals+"b";
+      }
+    }
+    return tonedict[tryval%12]+accidentals+Math.floor(this.value/12).toString()
   }
 }
 
@@ -150,8 +185,8 @@ export class Note {
     var ah = name.replace(/\s+|\(|\)/g, '').toLowerCase().split("/");
     return new Note(Tone.fromString(ah[0]),Duration.fromString(ah[1]));
   }
-  toString() {
-    return this.tone.toString()+"/"+this.duration.toString()
+  toString(key?:Key) {
+    return this.tone.toString(key)+"/"+this.duration.toString()
   }
   getTones() {
     return [this.tone];
@@ -173,10 +208,10 @@ export class Tones {
   static fromString(name:String) : Tones {
     return new Tones(name.split(',').map(n => Tone.fromString(n)));
   }
-  toString() {
+  toString(key?:Key) {
     var res = "(";
     for (var i=0;i<this.tones.length;i++) {
-      res = res+this.tones[i].toString();
+      res = res+this.tones[i].toString(key);
       if (i!=this.tones.length-1) res = res+" ";
     }
     return res+")"
@@ -195,8 +230,8 @@ export class Chord {
     var ah = name.replace(/\s+|\(|\)/g, '').toLowerCase().split("/");
     return new Chord(Tones.fromString(ah[0]),Duration.fromString(ah[1]));
   }
-  toString() {
-    return this.tones.toString()+"/"+this.duration.toString()
+  toString(key?:Key) {
+    return this.tones.toString(key)+"/"+this.duration.toString()
   }
   getTones() {
     return this.tones.tones;
@@ -214,7 +249,8 @@ export type Playable = Note | Chord;
 
 export class Key {
   tones:Array<ToneDesignation>;
-  enharmonic:string;
+  enharmonic:ToneDesignation;
+  cache?:Record<number,string>;
 
   static fromString(name:string) {
     name = name.replace(/\s+/g, '');
@@ -230,6 +266,7 @@ export class Key {
       mode = (key[0]==key[0].toUpperCase())?'major':'minor';
     }
     mode = mode.toLowerCase();
+    var related_intervals = '2212221'
     var intervals = '2212221'
     if (mode.startsWith('harmonic')) {
       intervals = '3121221';
@@ -240,18 +277,23 @@ export class Key {
     var derrangement = ['ionian','dorian','phrygian','lydian','mixolydian','aeolian','locrian'].indexOf(mode);
     if (derrangement==-1) throw new Error('Mode not recognized');
     for (;derrangement>0;derrangement--) {
-      enharmonic = enharmonic.plus(new Interval(-parseInt(intervals[0])));
+      enharmonic = enharmonic.plus(new Interval(-parseInt(related_intervals[0])));
       intervals = intervals.substring(1)+intervals[0];
-      //intervals = intervals[6]+intervals.substring(0,6);
+      related_intervals = related_intervals.substring(1)+related_intervals[0];
     }
     var tones = [];
     for (var i=0;i<7;i++) {
       tones.push(root);
       root = root.plus(new Interval(parseInt(intervals[i])));
     }
-    return new Key(tones,enharmonic.toString());
+    var fifths = (enharmonic.value*7)%12;
+    var sharpamts = [0,1,2,3,4,5,6,7,undefined,undefined,undefined,undefined];
+    var flatamts = [0,undefined,undefined,undefined,undefined,7,6,5,4,3,2,1];
+    if (enharmonic.sharped && sharpamts[fifths]==undefined) enharmonic = new ToneDesignation(enharmonic.value,false);
+    if (!enharmonic.sharped && flatamts[fifths]==undefined) enharmonic = new ToneDesignation(enharmonic.value,true);
+    return new Key(tones,enharmonic);
   }
-  constructor(tones:Array<ToneDesignation>,enharmonic:string) {
+  constructor(tones:Array<ToneDesignation>,enharmonic:ToneDesignation) {
     this.tones = tones;
     this.enharmonic = enharmonic;
   }
@@ -262,11 +304,72 @@ export class Key {
     }
     return res+"| enharmonic = "+this.enharmonic+">"
   }
+  get_implicit_tones() : Record<number,string> {
+    if (this.cache!=null) return this.cache;
+    var fifths = (this.enharmonic.value*7)%12;
+    var toneindex : Record<string,number> = {'C':0,'D':2,'E':4,'F':5,'G':7,'A':9,'B':11};
+    if (this.enharmonic.sharped) {
+      var amt = [0,1,2,3,4,5,6,7,undefined,undefined,undefined,undefined][fifths]!;
+      var order = 'FCGDAEB';
+      for (var i=0;i<amt;i++) toneindex[order[i]]++;
+    } else {
+      var amt = [0,undefined,undefined,undefined,undefined,7,6,5,4,3,2,1][fifths]!;
+      var order = 'BEADGCF';
+      for (var i=0;i<amt;i++) toneindex[order[i]]--;
+    }
+    var result : Record<number,string> = {};
+    for (var i=0;i<'ABCDEFG'.length;i++) result[toneindex['ABCDEFG'[i]]] = 'ABCDEFG'[i];
+    this.cache = result;
+    return result;
+  }
 }
 
 
 
 
+
+export class Sheet {
+  key:Key;
+  notes:Array<Playable>;
+  constructor(key:Key,notes:Array<Playable>) {
+    this.key = key;
+    this.notes = notes;
+  }
+
+
+  applyToStave(vf:Vex.Flow.Factory) {
+    var score = vf.EasyScore();
+    var system = vf.System();
+    var blah = "";
+    for (var i=0;i<this.notes.length;i++) {
+      blah = blah+this.notes[i].toString(this.key);
+      if (i!=this.notes.length-1) blah = blah+", ";
+    }
+    console.log(blah)
+    system.addStave({
+      voices: [
+        score.voice(score.notes(blah, {stem: 'up'}),{}),
+        //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{}),
+        //score.voice(score.notes('A/h, A/h', {stem: 'down'}),{})
+      ]
+    }).addClef('treble').addKeySignature(this.key.enharmonic.toString()).addTimeSignature('4/4');
+    console.log("yeah")
+    vf.draw();
+    console.log("what")
+  }
+
+
+  play(): void {
+    var synth = new Tonejs.PolySynth().toDestination();
+    var blah = new Duration(0,1);
+    for (var i=0;i<this.notes.length;i++) {
+      synth.triggerAttackRelease(this.notes[i].getTones().map(tone => tone.toString()), this.notes[i].duration.tonejs_repr(), "+"+blah.tonejs_transport_repr());
+      blah = blah.plus(this.notes[i].duration);
+    }
+  }
+
+
+}
 
 
 
