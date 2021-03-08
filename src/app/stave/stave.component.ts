@@ -12,12 +12,7 @@ export class StaveComponent implements OnInit {
 
   constructor() { }
 
-  sheet = new Sheet(Key.fromString("C"),[
-    Note.fromString('A/q'),
-    Chord.fromString('(F,G,C)/q'),
-    Note.fromString('A/q'),
-    Chord.fromString('(A,C,F#)/q'),
-  ])
+  sheet : any = null;
 
   ngOnInit(): void {
 
@@ -26,6 +21,13 @@ export class StaveComponent implements OnInit {
     const vf = new VF.Factory({
       renderer: {elementId: 'boo', width: 500, height: 200}
     });
+
+    this.sheet = new Sheet(Key.fromString("C"),[
+      Note.fromString('A/q'),
+      Chord.fromString('(F,G,C)/q'),
+      Note.fromString('A/q'),
+      Chord.fromString('(A,C,F#)/q'),
+    ])
 
     this.sheet.applyToStave(vf);
   }
