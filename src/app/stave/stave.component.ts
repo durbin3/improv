@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import Vex from 'vexflow';
+import * as Tone from 'tone'
 
 @Component({
   selector: 'app-stave',
@@ -22,12 +23,20 @@ export class StaveComponent implements OnInit {
 
     system.addStave({
       voices: [
-        score.voice(score.notes('C#5/q, B4, A4, G#4', {stem: 'up'}),{}),
-        score.voice(score.notes('C#4/h, C#4', {stem: 'down'}),{})
+        score.voice(score.notes('C#5/q, B4/q, A4/q, G#4/q', {stem: 'up'}),{}),
+        score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
       ]
     }).addClef('treble').addTimeSignature('4/4');
 
     vf.draw();
+  }
+
+
+  play(): void {
+    const synth = new Tone.Synth().toDestination();
+
+    //play a middle 'C' for the duration of an 8th note
+    synth.triggerAttackRelease("C4", "8n");
   }
 
 }
