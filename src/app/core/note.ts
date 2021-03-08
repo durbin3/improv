@@ -2,7 +2,7 @@
 
 
 
-enum IntervalQuality {
+export enum IntervalQuality {
   Major,
   Minor,
   Perfect,
@@ -11,7 +11,7 @@ enum IntervalQuality {
 }
 
 
-class Interval {
+export class Interval {
   quality?:IntervalQuality;
   amount:number;
   upwards:boolean;
@@ -23,70 +23,70 @@ class Interval {
 }
 
 
-class ToneDesignation {
+export class ToneDesignation {
   value: number;
   sharped : boolean;
   constructor(value:number,sharped?:boolean) {
     this.value = value%12;
-    this.sharped = sharped;
+    if (sharped==undefined) this.sharped = true;
+    else this.sharped = sharped;
   }
-
 }
 
-
-class Tone {
+export class Tone {
   value: number;
   sharped : boolean;
   constructor(value:number,sharped?:boolean) {
     this.value = value;
-    this.sharped = sharped;
+    if (sharped==undefined) this.sharped = true;
+    else this.sharped = sharped;
   }
   toString() {
-    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][value%12]+Math.floor(value/12).toString()
-    else              return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][value%12]+Math.floor(value/12).toString()
-
-    }
-    
+    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][this.value%12]+Math.floor(4+this.value/12).toString()
+    else              return ['a','b@','b','c','d@','d','e@','e','f','g@','g','a@'][this.value%12]+Math.floor(4+this.value/12).toString()
   }
 }
-class Duration {
-  numerator:number;
-  denominator:number;
+export class Duration {
+  numerator:number = 1;
+  denominator:number = 1;
   constructor(strrepr:string) {
-    if (strrepr=='q') {numerator=1;denominator=1;}
-    if (strrepr=='h') {numerator=2;denominator=1;}
+    if (strrepr=='q') {this.numerator=1;this.denominator=1;}
+    if (strrepr=='h') {this.numerator=2;this.denominator=1;}
   }
   toString() {
-    if (numerator==1 && denominator==1) return "q";
-    if (numerator==2 && denominator==1) return "h";
+    if (this.numerator==1 && this.denominator==1) return "q";
+    if (this.numerator==2 && this.denominator==1) return "h";
+    return "null"
   }
 }
-class Note {
+export class Note {
   tone:Tone;
-  duration:number;
-  constructor(tone:Tone,duration:number) {
+  duration:Duration;
+  constructor(tone:Tone,duration:Duration) {
     this.tone = tone;
     this.duration = duration;
   }
   toString() {
-    return tone.toString()+duration.toString()
+    return this.tone.toString()+"/"+this.duration.toString()
   }
 }
 
 
 
 
-class ChordDesignation {
+export class TonesDesignation {
 
 }
 
 
-class Chord {
+export class Tones {
 
 }
 
 
+export class Chord {
 
+}
 
 
 
