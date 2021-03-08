@@ -15,9 +15,9 @@ export class StaveComponent implements OnInit {
 
   notes = [
     new Note(new Tone(3),new Duration('q')),
-    new Note(new Tone(3),new Duration('q')),
     new Chord(new Tones([new Tone(3),new Tone(6),new Tone(10)]),new Duration('q')),
-    new Note(new Tone(3),new Duration('q'))
+    new Note(new Tone(3),new Duration('q')),
+    new Chord(new Tones([new Tone(3),new Tone(6),new Tone(10)]),new Duration('q'))
   ]
 
   ngOnInit(): void {
@@ -53,12 +53,10 @@ export class StaveComponent implements OnInit {
 
 
   play(): void {
-    const synth = new Tonejs.Synth().toDestination();
+    const synth = new Tonejs.PolySynth().toDestination();
     var blah = new Duration(0,1);
     for (var i=0;i<this.notes.length;i++) {
-      this.notes[i].getTones().forEach(tone => {
-        synth.triggerAttackRelease(tone.toString(), this.notes[i].duration.tonejs_repr(), "+"+blah.tonejs_transport_repr());
-      })
+      synth.triggerAttackRelease(this.notes[i].getTones().map(tone => tone.toString()), this.notes[i].duration.tonejs_repr(), "+"+blah.tonejs_transport_repr());
       blah = blah.plus(this.notes[i].duration);
     }
   }
