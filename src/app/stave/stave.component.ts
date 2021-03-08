@@ -53,9 +53,14 @@ export class StaveComponent implements OnInit {
 
   play(): void {
     const synth = new Tonejs.Synth().toDestination();
-
+    console.log("boop")
+    const now = Tonejs.now()
     //play a middle 'C' for the duration of an 8th note
-    synth.triggerAttackRelease("C4", "8n");
+    synth.triggerAttack("C4", now);
+    synth.triggerAttack("G4", now);
+    synth.triggerAttack("E4", now);
+    synth.triggerRelease(["C4", "G4", "E4", "C5", "E5"], now + 4);
+
   }
 
 }
