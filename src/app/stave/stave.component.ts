@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Note, Duration, Tone, Chord, Tones } from '../core/note';
+import { Note, Duration, Tone, Chord, Tones, Key } from '../core/note';
 import Vex from 'vexflow';
 import * as Tonejs from 'tone'
 
@@ -22,7 +22,7 @@ export class StaveComponent implements OnInit {
 
   ngOnInit(): void {
 
-    console.log('a#',Tone.fromString('a#').toString())
+    // console.log('a#',Tone.fromString('a#').toString())
 
 
   	const VF = Vex.Flow;
@@ -41,19 +41,24 @@ export class StaveComponent implements OnInit {
     }
     console.log(blah)
 
+    console.log("a",Key.fromString("a").toString());
+    console.log("C",Key.fromString("C").toString());
+    console.log("a minor",Key.fromString("a minor").toString());
+    console.log("d dorian",Key.fromString("d dorian").toString());
+    console.log("c major",Key.fromString("c major").toString());
+
     system.addStave({
       voices: [
         score.voice(score.notes(blah, {stem: 'up'}),{}),
         //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
       ]
-    }).addClef('treble').addKeySignature("A").addTimeSignature('4/4');
+    }).addClef('treble').addKeySignature("C").addTimeSignature('4/4');
 
     vf.draw();
   }
 
 
   play(): void {
-    console.log("why")
     const synth = new Tonejs.PolySynth().toDestination();
     var blah = new Duration(0,1);
     for (var i=0;i<this.notes.length;i++) {
