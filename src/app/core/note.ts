@@ -1,6 +1,16 @@
 
 
-
+function lcm(x:number,y:number) {
+  return (!x || !y) ? 0 : (x * y) / gcd(x, y);
+}
+function gcd(x:number,y:number) {
+  while(y) {
+    var t = y;
+    y = x % y;
+    x = t;
+  }
+  return x;
+}
 
 export enum IntervalQuality {
   Major,
@@ -9,7 +19,6 @@ export enum IntervalQuality {
   Diminished,
   Augmented
 }
-
 
 export class Interval {
   quality?:IntervalQuality;
@@ -49,9 +58,16 @@ export class Tone {
 export class Duration {
   numerator:number = 1;
   denominator:number = 1;
-  constructor(strrepr:string) {
-    if (strrepr=='q') {this.numerator=1;this.denominator=1;}
-    if (strrepr=='h') {this.numerator=2;this.denominator=1;}
+  constructor(a0:string|number,a1?:number) {
+    if (a0=='q') {this.numerator=1;this.denominator=1;}
+    if (a0=='h') {this.numerator=2;this.denominator=1;}
+    if (a1!=undefined) {this.numerator=a0 as number;this.denominator=a1;}
+  }
+  plus(other:Duration):Duration {
+    var nn = this.numerator * other.denominator + this.denominator * other.numerator;
+    var dd = this.denominator * other.denominator;
+    var gc = gcd(nn,dd);
+    return new Duration(nn/gc,dd/gc);
   }
   toString() : string {
     if (this.numerator==1 && this.denominator==1) return "q";
@@ -63,6 +79,12 @@ export class Duration {
     if (this.numerator==2 && this.denominator==1) return "2n";
     return "null"
   }
+  tonejs_transport_repr() : string {
+    if (4%this.denominator!=0) return "null";
+    var nn = this.numerator * (4/this.denominator);
+    return Math.floor(nn/16)+":"+(Math.floor(nn/4)%4)+":"+(nn%4);
+  }
+
 }
 export class Note {
   tone:Tone;
@@ -74,9 +96,10 @@ export class Note {
   toString() {
     return this.tone.toString()+"/"+this.duration.toString()
   }
+  getTones() {
+    return [this.tone];
+  }
 }
-
-
 
 
 export class TonesDesignation {
@@ -85,13 +108,48 @@ export class TonesDesignation {
 
 
 export class Tones {
-
+  tones:Array<Tone>;
+  constructor(tones:Array<Tone>) {
+    this.tones = tones;
+  }
+  toString() {
+    var res = "(";
+    for (var i=0;i<this.tones.length;i++) {
+      res = res+this.tones[i].toString();
+      if (i!=this.tones.length-1) res = res+".";
+    }
+    return res+")"
+  }
 }
 
 
 export class Chord {
-
+  tones:Tones;
+  duration:Duration;
+  constructor(tones:Tones,duration:Duration) {
+    this.tones = tones;
+    this.duration = duration;
+  }
+  toString() {
+    return this.tones.toString()+"/"+this.duration.toString()
+  }
+  getTones() {
+    return this.tones.tones;
+  }
 }
+
+
+
+export type Playable = Note | Chord;
+
+
+
+
+
+
+
+
+
 
 
 

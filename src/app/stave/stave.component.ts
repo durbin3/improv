@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Note, Duration, Tone } from '../core/note';
+import { Note, Duration, Tone, Chord, Tones } from '../core/note';
 import Vex from 'vexflow';
 import * as Tonejs from 'tone'
 
@@ -16,7 +16,7 @@ export class StaveComponent implements OnInit {
   notes = [
     new Note(new Tone(3),new Duration('q')),
     new Note(new Tone(3),new Duration('q')),
-    new Note(new Tone(3),new Duration('q')),
+    new Note(new Tone(3),new Duration('q')),//new Chord(new Tones([new Tone(3),new Tone(6),new Tone(10)]),new Duration('q')),
     new Note(new Tone(3),new Duration('q'))
   ]
 
@@ -39,11 +39,12 @@ export class StaveComponent implements OnInit {
       blah = blah+this.notes[i].toString();
       if (i!=this.notes.length-1) blah = blah+", ";
     }
+    console.log(blah)
 
     system.addStave({
       voices: [
         score.voice(score.notes(blah, {stem: 'up'}),{}),
-        score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
+        //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
       ]
     }).addClef('treble').addTimeSignature('4/4');
 
@@ -53,9 +54,13 @@ export class StaveComponent implements OnInit {
 
   play(): void {
     const synth = new Tonejs.Synth().toDestination();
-
-    //play a middle 'C' for the duration of an 8th note
-    synth.triggerAttackRelease("C4", "8n");
+    var blah = new Duration(0,1);
+    for (var i=0;i<this.notes.length;i++) {
+      this.notes[i].getTones().forEach(tone => {
+        synth.triggerAttackRelease(tone.toString(), this.notes[i].duration.tonejs_repr(), "+"+blah.tonejs_transport_repr());
+      })
+      blah = blah.plus(this.notes[i].duration);
+    }
   }
 
 }
