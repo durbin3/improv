@@ -209,12 +209,13 @@ export class Tones {
     return new Tones(name.split(',').map(n => Tone.fromString(n)));
   }
   toString(key?:Key) {
-    var res = "(";
+    var res = "";
     for (var i=0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString(key);
       if (i!=this.tones.length-1) res = res+" ";
     }
-    return res+")"
+    if (this.tones.length==1) return res;
+    return "("+res+")"
   }
 }
 

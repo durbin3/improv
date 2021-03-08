@@ -14,7 +14,7 @@ export class StaveComponent implements OnInit {
 
   sheet = new Sheet(Key.fromString("C"),[
     Note.fromString('A/q'),
-    Chord.fromString('(A,C,F#)/q'),
+    Chord.fromString('(F,G,C)/q'),
     Note.fromString('A/q'),
     Chord.fromString('(A,C,F#)/q'),
   ])
