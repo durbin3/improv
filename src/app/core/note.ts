@@ -113,12 +113,13 @@ export class Tones {
     this.tones = tones;
   }
   toString() {
-    var res = "(";
+    var res = "";
     for (var i=0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString();
       if (i!=this.tones.length-1) res = res+" ";
     }
-    return res+")"
+    if (this.tones.length==1) return res;
+    return "("+res+")"
   }
 }
 
