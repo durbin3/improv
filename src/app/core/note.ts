@@ -30,6 +30,7 @@ class NoteDesignation {
   constructor(value:number) {
     this.value = value%12;
   }
+
 }
 
 
@@ -43,18 +44,14 @@ class Note {
 
 
 
+class ChordDesignation {
+	
+}
 
 
+class Chord {
 
-
-
-
-
-
-
-
-
-
+}
 
 
 
