@@ -12,15 +12,16 @@ export class StaveComponent implements OnInit {
 
   constructor() { }
 
+
+  notes = [
+    new Note(new Tone(3),new Duration('q')),
+    new Note(new Tone(3),new Duration('q')),
+    new Note(new Tone(3),new Duration('q')),
+    new Note(new Tone(3),new Duration('q'))
+  ]
+
   ngOnInit(): void {
 
-
-    var notes = [
-      new Note(new Tone(3),new Duration('q')),
-      new Note(new Tone(3),new Duration('q')),
-      new Note(new Tone(3),new Duration('q')),
-      new Note(new Tone(3),new Duration('q'))
-    ]
 
 
 
@@ -34,9 +35,9 @@ export class StaveComponent implements OnInit {
     const system = vf.System();
 
     var blah = "";
-    for (var i=0;i<notes.length;i++) {
-      blah = blah+notes[i].toString();
-      if (i!=notes.length-1) blah = blah+", ";
+    for (var i=0;i<this.notes.length;i++) {
+      blah = blah+this.notes[i].toString();
+      if (i!=this.notes.length-1) blah = blah+", ";
     }
 
     system.addStave({

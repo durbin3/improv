@@ -53,9 +53,14 @@ export class Duration {
     if (strrepr=='q') {this.numerator=1;this.denominator=1;}
     if (strrepr=='h') {this.numerator=2;this.denominator=1;}
   }
-  toString() {
+  toString() : string {
     if (this.numerator==1 && this.denominator==1) return "q";
     if (this.numerator==2 && this.denominator==1) return "h";
+    return "null"
+  }
+  tonejs_repr() : string {
+    if (this.numerator==1 && this.denominator==1) return "4n";
+    if (this.numerator==2 && this.denominator==1) return "2n";
     return "null"
   }
 }
