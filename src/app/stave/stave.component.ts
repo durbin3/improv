@@ -14,15 +14,15 @@ export class StaveComponent implements OnInit {
 
 
   notes = [
-    new Chord(new Tones([new Tone(3)]),new Duration('q')),
-    new Chord(new Tones([new Tone(10)]),new Duration('q')),
-    new Chord(new Tones([new Tone(7)]),new Duration('q')),
-    new Chord(new Tones([new Tone(3),new Tone(7),new Tone(10)]),new Duration('q'))
+    Note.fromString('A/q'),
+    Chord.fromString('(F,G,C)/q'),
+    Note.fromString('A/q'),
+    Chord.fromString('(A,C,F#)/q'),
   ]
 
   ngOnInit(): void {
 
-
+    console.log('a#',Tone.fromString('a#').toString())
 
 
   	const VF = Vex.Flow;
@@ -44,15 +44,16 @@ export class StaveComponent implements OnInit {
     system.addStave({
       voices: [
         score.voice(score.notes(blah, {stem: 'up'}),{}),
-        //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
+        // score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
       ]
-    }).addClef('treble').addTimeSignature('4/4');
+    }).addClef('treble').addKeySignature("A").addTimeSignature('4/4');
 
     vf.draw();
   }
 
 
   play(): void {
+    console.log("why")
     const synth = new Tonejs.PolySynth().toDestination();
     synth.set({ detune: -1200 });
     console.log("boop")
