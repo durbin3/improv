@@ -16,7 +16,7 @@ export class StaveComponent implements OnInit {
   notes = [
     new Note(new Tone(3),new Duration('q')),
     new Note(new Tone(3),new Duration('q')),
-    new Note(new Tone(3),new Duration('q')),//new Chord(new Tones([new Tone(3),new Tone(6),new Tone(10)]),new Duration('q')),
+    new Chord(new Tones([new Tone(3),new Tone(6),new Tone(10)]),new Duration('q')),
     new Note(new Tone(3),new Duration('q'))
   ]
 

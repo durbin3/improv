@@ -116,7 +116,7 @@ export class Tones {
     var res = "(";
     for (var i=0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString();
-      if (i!=this.tones.length-1) res = res+".";
+      if (i!=this.tones.length-1) res = res+" ";
     }
     return res+")"
   }
