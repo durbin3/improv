@@ -52,7 +52,7 @@ export class StaveComponent implements OnInit {
         score.voice(score.notes(blah, {stem: 'up'}),{}),
         // score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{})
       ]
-    }).addClef('treble').addKeySignature("C").addTimeSignature('4/4');
+    }).addClef('treble').addKeySignature("F#").addTimeSignature('4/4');
 
     vf.draw();
   }

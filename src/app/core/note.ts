@@ -57,7 +57,7 @@ export class ToneDesignation {
     name = name.replace(/\s+/g, '').toLowerCase()
     var sharped = true;
     if (name.length==0) throw new Error('unrecognized tone');
-    var toneindex = ({'a':0,'b':2,'c':3,'d':5,'e':7,'f':8,'g':10} as Record<string,number>)[name[0]];
+    var toneindex = ({'a':9,'b':11,'c':0,'d':2,'e':4,'f':5,'g':7} as Record<string,number>)[name[0]];
     if (toneindex==undefined || name.length>2) throw new Error('unrecognized tone');
     if (name.length==2) {
       if (name[1]=='#') toneindex++;
@@ -69,8 +69,8 @@ export class ToneDesignation {
     return new ToneDesignation(toneindex,sharped);
   }
   toString() : string {
-    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][this.value%12]
-    else              return ['a','b@','b','c','d@','d','e@','e','f','g@','g','a@'][this.value%12]
+    if (this.sharped) return ['c','c#','d','d#','e','f','f#','g','g#','a','a#','b'][this.value%12]
+    else              return ['c','d@','d','e@','e','f','g@','g','a@','a','b@','b'][this.value%12]
   }
 }
 
@@ -98,8 +98,8 @@ export class Tone {
     return ToneDesignation.fromString(name).inOctave(blah==null?4:(+blah));
   }
   toString() : string {
-    if (this.sharped) return ['a','a#','b','c','c#','d','d#','e','f','f#','g','g#'][this.value%12]+Math.floor(this.value/12).toString()
-    else              return ['a','b@','b','c','d@','d','e@','e','f','g@','g','a@'][this.value%12]+Math.floor(this.value/12).toString()
+    if (this.sharped) return ['c','c#','d','d#','e','f','f#','g','g#','a','a#','b'][this.value%12]+Math.floor(this.value/12).toString()
+    else              return ['c','d@','d','e@','e','f','g@','g','a@','a','b@','b'][this.value%12]+Math.floor(this.value/12).toString()
   }
 }
 
