@@ -40,6 +40,37 @@ export class Interval {
   }
 }
 
+function relative_tone(
+  value: number,
+  sharped : boolean,
+  key?:{sharped:boolean,lettertones:Array<number>}
+) : [string,number] {
+  var defaultTones : Array<number> = [0,2,4,5,7,9,11];
+  var tonedict = key==null?defaultTones:key.lettertones;
+  sharped = key==null?sharped:key.sharped;
+  var or_index = tonedict.indexOf(value%12);
+  if (or_index!=-1) return ['CDEFGAB'[or_index],value];
+  or_index = defaultTones.indexOf(value%12);
+  if (or_index!=-1) {
+    tonedict[or_index] = defaultTones[or_index];
+    return ['CDEFGAB'[or_index]+'n',value];
+  }
+  var accidentals = "";
+  var hack = 0;
+  while ((or_index = tonedict.indexOf((value+12)%12))==-1) {
+    if (sharped) {
+      value = value-1;
+      hack++;
+      accidentals = accidentals+"#";
+    } else {
+      value = value+1;
+      hack--; 
+      accidentals = accidentals+"b";
+    }
+  }
+  tonedict[or_index]+=hack;
+  return ['CDEFGAB'[or_index]+accidentals,value];
+}
 
 export class ToneDesignation {
   value: number;
@@ -73,24 +104,8 @@ export class ToneDesignation {
     }
     return new ToneDesignation(toneindex,sharped);
   }
-  toString(key?:Key) : string {
-    var defaultTones : Record<number,string> = {0:'C',2:'D',4:'E',5:'F',7:'G',9:'A',11:'B'};
-    var tonedict = key==null?defaultTones:key.get_implicit_tones();
-    if (tonedict[this.value%12]!=undefined) return tonedict[this.value%12];
-    if (defaultTones[this.value%12]!=undefined) return defaultTones[this.value%12]+'n';
-    var tryval = this.value%12
-    var accidentals = "";
-    while (tonedict[tryval%12]==undefined) {
-      if (this.sharped) {
-        tryval = (tryval+11)%12;
-        accidentals = accidentals+"#";
-      }
-      else {
-        tryval = (tryval+1)%12;
-        accidentals = accidentals+"b";
-      }
-    }
-    return tonedict[tryval%12]+accidentals
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) : string {
+    return relative_tone(this.value,this.sharped,key)[0];
   }
 }
 
@@ -117,24 +132,9 @@ export class Tone {
     name = name.replace(/\d+/g,'')
     return ToneDesignation.fromString(name).inOctave(blah==null?4:(+blah));
   }
-  toString(key?:Key) : string {
-    var defaultTones : Record<number,string> = {0:'C',2:'D',4:'E',5:'F',7:'G',9:'A',11:'B'};
-    var tonedict = key==null?defaultTones:key.get_implicit_tones();
-    if (tonedict[this.value%12]!=undefined) return tonedict[this.value%12]+Math.floor(this.value/12).toString();
-    if (defaultTones[this.value%12]!=undefined) return defaultTones[this.value%12]+'n'+Math.floor(this.value/12).toString();
-    var tryval = this.value%12
-    var accidentals = "";
-    while (tonedict[tryval%12]==undefined) {
-      if (this.sharped) {
-        tryval = (tryval+11)%12;
-        accidentals = accidentals+"#";
-      }
-      else {
-        tryval = (tryval+1)%12;
-        accidentals = accidentals+"b";
-      }
-    }
-    return tonedict[tryval%12]+accidentals+Math.floor(this.value/12).toString()
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) : string {
+    var reltone = relative_tone(this.value,this.sharped,key);
+    return reltone[0]+Math.floor(reltone[1]/12).toString()
   }
 }
 
@@ -197,7 +197,7 @@ export class Note {
     var ah = name.replace(/\s+|\(|\)/g, '').toLowerCase().split("/");
     return new Note(Tone.fromString(ah[0]),Duration.fromString(ah[1]));
   }
-  toString(key?:Key) {
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) {
     return this.tone.toString(key)+"/"+this.duration.toString()
   }
   getTones() {
@@ -220,7 +220,7 @@ export class Tones {
   static fromString(name:String) : Tones {
     return new Tones(name.split(',').map(n => Tone.fromString(n)));
   }
-  toString(key?:Key) {
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) {
     var res = "";
     for (var i=0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString(key);
@@ -243,7 +243,7 @@ export class Chord {
     var ah = name.replace(/\s+|\(|\)/g, '').toLowerCase().split("/");
     return new Chord(Tones.fromString(ah[0]),Duration.fromString(ah[1]));
   }
-  toString(key?:Key) {
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) {
     return this.tones.toString(key)+"/"+this.duration.toString()
   }
   getTones() {
@@ -258,7 +258,7 @@ export class Rest {
   static fromString(name:string) : Rest {
     return new Rest(Duration.fromString(name));
   }
-  toString(key?:Key) {
+  toString(key?:{sharped:boolean,lettertones:Array<number>}) {
     return "B4/"+this.duration.toString()+"/r";
   }
   getTones() {
@@ -278,7 +278,6 @@ export type Playable = Note | Chord | Rest;
 export class Key {
   tones:Array<ToneDesignation>;
   enharmonic:ToneDesignation;
-  cache?:Record<number,string>;
 
   static fromString(name:string) {
     name = name.replace(/\s+/g, '');
@@ -332,23 +331,19 @@ export class Key {
     }
     return res+"| enharmonic = "+this.enharmonic+">"
   }
-  get_implicit_tones() : Record<number,string> {
-    if (this.cache!=null) return this.cache;
+  get_implicit_tones() : Array<number> {
     var fifths = (this.enharmonic.value*7)%12;
-    var toneindex : Record<string,number> = {'C':0,'D':2,'E':4,'F':5,'G':7,'A':9,'B':11};
+    var toneindex : Array<number> = [0,2,4,5,7,9,11];
     if (this.enharmonic.sharped) {
       var amt = [0,1,2,3,4,5,6,7,undefined,undefined,undefined,undefined][fifths]!;
       var order = 'FCGDAEB';
-      for (var i=0;i<amt;i++) toneindex[order[i]]++;
+      for (var i=0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]++;
     } else {
       var amt = [0,undefined,undefined,undefined,undefined,7,6,5,4,3,2,1][fifths]!;
       var order = 'BEADGCF';
-      for (var i=0;i<amt;i++) toneindex[order[i]]--;
+      for (var i=0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]--;
     }
-    var result : Record<number,string> = {};
-    for (var i=0;i<'ABCDEFG'.length;i++) result[toneindex['ABCDEFG'[i]]] = 'ABCDEFG'[i];
-    this.cache = result;
-    return result;
+    return toneindex;
   }
 }
 
@@ -523,10 +518,14 @@ export class Sheet {
       var measure_width = measure_index==0?300:200;
       var system = vf.System({x:offset,width:measure_width});
       offset += measure_width;
+      var tonerepr = {
+        sharped:this.key.enharmonic.sharped,
+        lettertones:this.key.get_implicit_tones()
+      }
       var notelist = x.reduce((umu, y) => {
         var blah = "";
         for (var i=0;i<y.notes.length;i++) {
-          blah = blah+y.notes[i].toString(this.key);
+          blah = blah+y.notes[i].toString(tonerepr);
           if (i!=y.notes.length-1) blah = blah+", ";
         }
         console.log(blah)
