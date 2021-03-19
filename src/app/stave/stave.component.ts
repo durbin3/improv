@@ -49,7 +49,7 @@ export class StaveComponent implements OnInit {
     const vf2 = new VF.Factory({
       renderer: {elementId: 'boo2', width: 1500, height: 200}
     });
-    new Sheet(Key.fromString("D"),TimeSignature.fromString("(2+2+2+3)/8"),notes).applyToStave(vf2)
+    new Sheet(Key.fromString("D"),TimeSignature.fromString("2/2"),notes).applyToStave(vf2)
   }
 
   play(): void {

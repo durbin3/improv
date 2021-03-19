@@ -417,7 +417,6 @@ export class TimeSignature {
     return new TimeSignature(ababab,denominator);
   }
   arrange(arr:Array<Playable>) : Array<Array<{beamed:boolean,notes:Array<Playable>}>> {
-    console.log(this)
     var ml = this.measurelength();
     var shelflength : Array<Array<Duration>> = [this.shelves[0].map(x => new Duration(x,this.base))];
     this.shelves.forEach((xs,j) => {
@@ -433,11 +432,14 @@ export class TimeSignature {
     var output : Array<Array<{beamed:boolean,notes:Array<Playable>}>> = [];
     var co = new Duration(0,1);
     var i=0;
+    arr = arr.concat([]);
     while (i<arr.length) {
       var k=i;
       var beamdex:Array<[number,number,Duration]> = [];
       for (;co.lt(ml);i++) {
-        if (i==arr.length) arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));
+        if (i==arr.length) {
+          arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));
+        }
         co = co.plus(arr[i].duration);
         if (arr[i].duration.lt(Duration.fromString('q'))) {
           var verdim:Array<Duration> = [];
@@ -521,7 +523,7 @@ export class Sheet {
     var offset = 0;
     this.timesig.arrange(this.notes).forEach((x,measure_index) => {
       console.log("one measure: ",x);
-      var measure_width = measure_index==0?300:200;
+      var measure_width = measure_index==0?320:300;
       var system = vf.System({x:offset,width:measure_width});
       offset += measure_width;
       var tonerepr = {
