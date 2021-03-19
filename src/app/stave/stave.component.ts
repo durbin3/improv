@@ -31,7 +31,7 @@ export class StaveComponent implements OnInit {
       Chord.fromString('A/8'),
       Chord.fromString('(A,C,F#)/8'),
       Chord.fromString('(A,C,F#)/8'),
-      Note.fromString('A/q'),
+      Note.fromString('A/8'),
       Chord.fromString('(F,G,C)/8'),
       Chord.fromString('(F,G,C)/8'),
       Chord.fromString('A/16'),
@@ -42,14 +42,14 @@ export class StaveComponent implements OnInit {
       Chord.fromString('(A,C,F#)/8')
     ]
 
-    this.sheet = new Sheet(Key.fromString("C"),TimeSignature.fromString("6/8"),notes);
+    this.sheet = new Sheet(Key.fromString("C"),TimeSignature.fromString("9/8"),notes);
     this.sheet.applyToStave(vf);
 
 
     const vf2 = new VF.Factory({
       renderer: {elementId: 'boo2', width: 1500, height: 200}
     });
-    new Sheet(Key.fromString("D"),TimeSignature.fromString("3/4"),notes).applyToStave(vf2)
+    new Sheet(Key.fromString("D"),TimeSignature.fromString("(2+2+2+3)/8"),notes).applyToStave(vf2)
   }
 
   play(): void {

@@ -408,7 +408,13 @@ export class TimeSignature {
     if (alt.length==1) return new TimeSignature(alt[0],denominator);
     var maxlen = Math.max.apply(null,alt.map(o=>o.length));
     alt.forEach(com=>{while (com.length<maxlen) com.push([1]);});
-    return new TimeSignature(alt.reduce((a, b) => a.map((v, i) => v.concat(b[i]))).concat([alt.length]),denominator);
+
+    var ababab = alt.reduce((a, b) => a.map((v, i) => v.concat(b[i]))).concat([[alt.length]]);
+
+    console.log(ababab)
+
+
+    return new TimeSignature(ababab,denominator);
   }
   arrange(arr:Array<Playable>) : Array<Array<{beamed:boolean,notes:Array<Playable>}>> {
     console.log(this)
