@@ -142,34 +142,46 @@ export class Duration {
   numerator:number = 1;
   denominator:number = 1;
   constructor(a0:number,a1:number) {
-    this.numerator=a0;
-    this.denominator=a1;
+    var gc = gcd(a0,a1);
+    this.numerator=a0/gc;
+    this.denominator=a1/gc;
   }
   static fromString(name:string) : Duration {
     name = name.replace(/\s+/g, '').toLowerCase()
-    if (name=='q') return new Duration(1,1);
-    if (name=='h') return new Duration(2,1);
+    if (name=='q' || name=='4') return new Duration(1,4);
+    if (name=='h' || name=='2') return new Duration(1,2);
+    if (name=='8') return new Duration(1,8);
+    if (name=='16') return new Duration(1,16);
     throw new Error('unrecognized duration');
   }
-  plus(other:Duration):Duration {
-    var nn = this.numerator * other.denominator + this.denominator * other.numerator;
-    var dd = this.denominator * other.denominator;
-    var gc = gcd(nn,dd);
-    return new Duration(nn/gc,dd/gc);
-  }
+  plus(other:Duration):Duration {return new Duration(this.numerator * other.denominator + this.denominator * other.numerator,this.denominator * other.denominator);}
+  minus(other:Duration):Duration {return new Duration(this.numerator * other.denominator - this.denominator * other.numerator,this.denominator * other.denominator);}
+  floordiv(other:Duration):number {return Math.floor((this.numerator * other.denominator) / (this.denominator * other.numerator));}
+  ceildiv(other:Duration):number {return Math.ceil((this.numerator * other.denominator) / (this.denominator * other.numerator));}
+  times(other:number):Duration {return new Duration(this.numerator * other,this.denominator);}
+  split(other:number):Duration {return new Duration(this.numerator,this.denominator * other);}
+  mod(other:Duration):Duration {return this.minus(other.times(this.floordiv(other)));}
+  upmod(other:Duration):Duration {return this.minus(other.times(this.ceildiv(other)-1));}
+  eq(other:Duration):boolean {return this.numerator * other.denominator == this.denominator * other.numerator;}
+  lt(other:Duration):boolean {return this.numerator * other.denominator < this.denominator * other.numerator;}
+  gt(other:Duration):boolean {return this.numerator * other.denominator > this.denominator * other.numerator;}
+  lteq(other:Duration):boolean {return this.numerator * other.denominator <= this.denominator * other.numerator;}
+  gteq(other:Duration):boolean {return this.numerator * other.denominator >= this.denominator * other.numerator;}
   toString() : string {
-    if (this.numerator==1 && this.denominator==1) return "q";
-    if (this.numerator==2 && this.denominator==1) return "h";
+    if (this.numerator==1 && this.denominator==1) return "w";
+    if (this.numerator==1) return ""+this.denominator;
     return "null"
   }
   tonejs_repr() : string {
-    if (this.numerator==1 && this.denominator==1) return "4n";
-    if (this.numerator==2 && this.denominator==1) return "2n";
+    if (this.numerator==1 && this.denominator==16) return "16n";
+    if (this.numerator==1 && this.denominator==8) return "8n";
+    if (this.numerator==1 && this.denominator==4) return "4n";
+    if (this.numerator==1 && this.denominator==2) return "2n";
     return "null"
   }
   tonejs_transport_repr() : string {
-    if (4%this.denominator!=0) return "null";
-    var nn = this.numerator * (4/this.denominator);
+    if (16%this.denominator!=0) return "null";
+    var nn = this.numerator * (16/this.denominator);
     return Math.floor(nn/16)+":"+(Math.floor(nn/4)%4)+":"+(nn%4);
   }
 
@@ -238,10 +250,25 @@ export class Chord {
     return this.tones.tones;
   }
 }
+export class Rest {
+  duration:Duration;
+  constructor(duration:Duration) {
+    this.duration = duration;
+  }
+  static fromString(name:string) : Rest {
+    return new Rest(Duration.fromString(name));
+  }
+  toString(key?:Key) {
+    return "B4/"+this.duration.toString()+"/r";
+  }
+  getTones() {
+    return [];
+  }
+}
 
 
 
-export type Playable = Note | Chord;
+export type Playable = Note | Chord | Rest;
 
 
 
@@ -327,36 +354,209 @@ export class Key {
 
 
 
+export class TimeSignature {
+  shelves:Array<Array<number>>;
+  base:number;
+  constructor(shelves:Array<Array<number>>,base:number) {
+    this.shelves = shelves;
+    this.base = base;
+    if (this.shelves[this.shelves.length-1].length!=1) throw new Error('wrong internal format for time sig');
+  }
+  beats() : number {
+    var a = 0;
+    for (var i=0;i<this.shelves[0].length;i++) a+=this.shelves[0][i];
+    return a;
+  }
+  toString() {
+    return this.beats()+'/'+this.base;
+  }
+  measurelength() : Duration {
+    return new Duration(this.beats(),this.base);
+  }
+  static fromString(name:string) : TimeSignature {
+    var com = name.replace(/\s+|\(|\)/g, '').toLowerCase().split('/');
+    if (com.length!=2) throw new Error("unrecognized time signature format");
+    var numerators = com[0].split('+').map(y => parseInt(y));
+    var denominator = parseInt(com[1]);
+    function is_not_pow_2(x:number):boolean {
+      while (x%2==0) x/=2;
+      return x!=1;
+    }
+    if (is_not_pow_2(denominator)) throw new Error("time signature too strange");
+    numerators = numerators.reduce((prev:Array<number>,num:number) => {
+      function has_nonsimple_factor(x:number):boolean {
+        while (x%2==0) x/=2;
+        while (x%3==0) x/=3;
+        return x!=1;
+      }
+      while (has_nonsimple_factor(num)) {
+        if (num%2!=0) {prev = prev.concat([3]);num-=3;}
+        else          {prev = prev.concat([2]);num-=2;}
+      }
+      return prev.concat([num]);
+    },[]);
+    var alt = numerators.map(numerator => {
+      if (numerator==1) return [[1]];
+      var num = numerator;
+      var try_compound = denominator%8==0;
+      var divisions:Array<number> = []
+      while (num%3==0 && try_compound) {divisions.push(3);num/=3;}
+      while (num%2==0) {divisions.push(2);num/=2;}
+      while (num%3==0) {divisions.push(3);num/=3;}
+      var res:Array<Array<number>> = [];
+      divisions.forEach(x => {
+        numerator/=x;
+        res.push(Array(numerator).fill(x));
+      });
+      return res;
+    })
+    if (alt.length==1) return new TimeSignature(alt[0],denominator);
+    var maxlen = Math.max.apply(null,alt.map(o=>o.length));
+    alt.forEach(com=>{while (com.length<maxlen) com.push([1]);});
+    return new TimeSignature(alt.reduce((a, b) => a.map((v, i) => v.concat(b[i]))).concat([alt.length]),denominator);
+  }
+  arrange(arr:Array<Playable>) : Array<Array<{beamed:boolean,notes:Array<Playable>}>> {
+    console.log(this)
+    var ml = this.measurelength();
+    var shelflength : Array<Array<Duration>> = [this.shelves[0].map(x => new Duration(x,this.base))];
+    this.shelves.forEach((xs,j) => {
+      if (j==0) return;
+      var i=0;
+      shelflength.push(xs.map(y => {
+        var sum = shelflength[j-1][i];y--,i++;
+        for (;y>0;y--,i++) sum = sum.plus(shelflength[j-1][i]);
+        return sum;
+      }));
+    });
+    if (this.beats()*(8/this.base)>4) shelflength.splice(shelflength.length-1);
+    var output : Array<Array<{beamed:boolean,notes:Array<Playable>}>> = [];
+    var co = new Duration(0,1);
+    var i=0;
+    while (i<arr.length) {
+      var k=i;
+      var beamdex:Array<[number,number,Duration]> = [];
+      for (;co.lt(ml);i++) {
+        if (i==arr.length) arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));
+        co = co.plus(arr[i].duration);
+        if (arr[i].duration.lt(Duration.fromString('q'))) {
+          var verdim:Array<Duration> = [];
+          for (var j=shelflength.length-1;;j--) {
+            var bco = co;
+            var vl:Duration;
+            if (j<0) {
+              bco = bco.upmod(new Duration(1,this.base));
+              vl = new Duration(1,this.base*Math.pow(2,-1-j));
+            } else {
+              var u=0;
+              for (;bco.gt(shelflength[j][u]);u++) bco = bco.minus(shelflength[j][u]);
+              vl = shelflength[j][u];
+            }
+            if (vl.lteq(arr[i].duration)) break
+            if (bco.eq(vl) && (verdim.length==0 || !verdim[verdim.length-1].eq(vl))) verdim.push(vl);
+          }
+          var safej = i;
+          var safeko = arr[i].duration;
+          for (var l=verdim.length-1;l>=0;l--) { 
+            var t=beamdex.length-1;
+            var j=safej;
+            var ko=safeko;
+            while (ko.lt(verdim[l]) && t>=0 && beamdex[t][1]==j) {
+              ko = ko.plus(beamdex[t][2]);
+              j = beamdex[t--][0];
+            }
+            if (ko.eq(verdim[l])) {
+              beamdex.splice(t+1);
+              safej = j;
+              safeko = ko;
+            } else break;
+          }
+          beamdex.push([safej,i+1,safeko]);
+        }
+      }
+      co = co.minus(ml);
+      var row : Array<{beamed:boolean,notes:Array<Playable>}> = []
+      var unbeamed : Array<Playable> = [];
+      var l = 0;
+      for (var j=k;j<i;) {
+        if (l<beamdex.length && beamdex[l][0]==j) {
+          if (beamdex[l][1]==beamdex[l][0]+1) l++
+          else {
+            if (unbeamed.length) {
+              row.push({beamed:false,notes:unbeamed});
+              unbeamed = [];
+            }
+            row.push({beamed:true,notes:arr.slice(beamdex[l][0],beamdex[l][1])});
+            j = beamdex[l++][1];
+            continue
+          }
+        }
+        unbeamed.push(arr[j++]);
+      }
+      if (unbeamed.length) row.push({beamed:false,notes:unbeamed});
+      output.push(row);
+    }
+    return output;
+  }
+}
+
+
+
 
 
 export class Sheet {
   key:Key;
+  timesig:TimeSignature;
   notes:Array<Playable>;
-  constructor(key:Key,notes:Array<Playable>) {
+  constructor(key:Key,timesig:TimeSignature,notes:Array<Playable>) {
     this.key = key;
+    this.timesig = timesig;
     this.notes = notes;
   }
 
 
   applyToStave(vf:Vex.Flow.Factory) {
     var score = vf.EasyScore();
-    var system = vf.System();
-    var blah = "";
-    for (var i=0;i<this.notes.length;i++) {
-      blah = blah+this.notes[i].toString(this.key);
-      if (i!=this.notes.length-1) blah = blah+", ";
-    }
-    console.log(blah)
-    system.addStave({
-      voices: [
-        score.voice(score.notes(blah, {stem: 'up'}),{}),
-        //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{}),
-        //score.voice(score.notes('A/h, A/h', {stem: 'down'}),{})
-      ]
-    }).addClef('treble').addKeySignature(this.key.enharmonic.toString()).addTimeSignature('4/4');
-    console.log("yeah")
+    score.set({ time: this.timesig.toString() });
+    var offset = 0;
+    this.timesig.arrange(this.notes).forEach((x,measure_index) => {
+      console.log("one measure: ",x);
+      var measure_width = measure_index==0?300:200;
+      var system = vf.System({x:offset,width:measure_width});
+      offset += measure_width;
+      var notelist = x.reduce((umu, y) => {
+        var blah = "";
+        for (var i=0;i<y.notes.length;i++) {
+          blah = blah+y.notes[i].toString(this.key);
+          if (i!=y.notes.length-1) blah = blah+", ";
+        }
+        console.log(blah)
+        return umu.concat(y.beamed?score.beam(score.notes(blah)):score.notes(blah));
+      },score.notes(""));
+
+      var stave = system.addStave({
+        voices: [
+          //score.voice(score.notes(blah, {stem: 'up'}),{options: { autoStem: true }}),
+          score.voice(
+            notelist,
+            // score.notes('C#5/h, B4'),
+              // .concat(score.beam(score.notes('A4/8, E4, C4, D4'))),
+              // .concat(score.beam(score.notes('A4/8, E4/8, C4/8, D4/8'))),
+              //.concat(score.beam(score.notes('A4/8, E4/8, C4/8, D4/16, D4/16'))),
+              // .concat(score.beam(score.notes('A4/16, A4/16, E4/16, E4/16, C4/16, C4/16, D4/16, D4/16'))),
+              // .concat(score.beam(score.beam(score.notes('A4/16, A4/16, E4/16, E4/16')).concat(score.beam(score.notes('C4/16, C4/16, D4/16, D4/16'))))),
+               // .concat(score.beam(score.notes('A4/8, E4/4, D4/8'))),
+              // .concat(score.beam(score.notes('A4/4, E4'))),
+
+              {}
+          )
+          //score.voice(score.notes('C#4/h, C#4/h', {stem: 'down'}),{}),
+          //score.voice(score.notes('A/h, A/h', {stem: 'down'}),{})
+        ]
+      })
+      if (measure_index==0) stave.addClef('treble').addKeySignature(this.key.enharmonic.toString()).addTimeSignature(this.timesig.toString());
+
+    })
     vf.draw();
-    console.log("what")
   }
 
 
