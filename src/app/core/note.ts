@@ -419,7 +419,7 @@ export class TimeSignature {
   arrange(arr:Array<Playable>) : Array<Array<{beamed:boolean,notes:Array<Playable>}>> {
     var ml = this.measurelength();
     var shelflength : Array<Array<Duration>> = [this.shelves[0].map(x => new Duration(x,this.base))];
-    this.shelves.forEach((xs,j) => {
+    this.shelves.forEach((xs,j) => {//this constructs the duration corresponding to each entry in the shelf object.
       if (j==0) return;
       var i=0;
       shelflength.push(xs.map(y => {
@@ -428,25 +428,25 @@ export class TimeSignature {
         return sum;
       }));
     });
-    if (this.beats()*(8/this.base)>4) shelflength.splice(shelflength.length-1);
+    if (this.beats()*(8/this.base)>4) shelflength.splice(shelflength.length-1);//This line is responsible for ensuring you don't bridge the outermost grouping of notes (i.e. you don't bridge across the middle, or across either middle for triplet time (behaves weirdly for additive time signatures))
     var output : Array<Array<{beamed:boolean,notes:Array<Playable>}>> = [];
-    var co = new Duration(0,1);
-    var i=0;
-    arr = arr.concat([]);
-    while (i<arr.length) {
-      var k=i;
-      var beamdex:Array<[number,number,Duration]> = [];
-      for (;co.lt(ml);i++) {
-        if (i==arr.length) {
-          arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));
+    var co = new Duration(0,1);//the current amount of duration into each measure that the currently considered list of nodes stretches into
+    var i=0;//sentry var
+    arr = arr.concat([]);//shallow-copies arr so that when you modify it by adding rests to the end it won't modify the original list of nodes.
+    while (i<arr.length) {//this iterates for each measure
+      var k=i;//first index of the measure, inclusive (at the end of the following loop, i will be the last index of the measure, exclusive)
+      var beamdex:Array<[number,number,Duration]> = [];//current list of beamed notes
+      for (;co.lt(ml);i++) {//this iterates over each note in the measure
+        if (i==arr.length) {//this statement is responsible for padding the end of the note array with rests if you don't have enough notes to complete the measure
+          arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));//wonky here so that rests of irregular length are broken up into smaller rests that the code will know how to represent
         }
         co = co.plus(arr[i].duration);
-        if (arr[i].duration.lt(Duration.fromString('q'))) {
-          var verdim:Array<Duration> = [];
-          for (var j=shelflength.length-1;;j--) {
+        if (arr[i].duration.lt(Duration.fromString('q'))) {//quarter notes and larger are not considered beamable, and the program should not attempt to beam over them.
+          var verdim:Array<Duration> = [];//list of durations of legal groupings that end on the currently considered note, sorted in descending order
+          for (var j=shelflength.length-1;;j--) {//iterate over each possible grouping of notes (grouped by beat, grouped by next level... grouped by measure)
             var bco = co;
             var vl:Duration;
-            if (j<0) {
+            if (j<0) {//j<-1 represents splitting up base notes. j==-1 represents base notes. j==0 represents the beats. j==shelf.length-1 represents the whole measure.
               bco = bco.upmod(new Duration(1,this.base));
               vl = new Duration(1,this.base*Math.pow(2,-1-j));
             } else {
@@ -454,12 +454,12 @@ export class TimeSignature {
               for (;bco.gt(shelflength[j][u]);u++) bco = bco.minus(shelflength[j][u]);
               vl = shelflength[j][u];
             }
-            if (vl.lteq(arr[i].duration)) break
-            if (bco.eq(vl) && (verdim.length==0 || !verdim[verdim.length-1].eq(vl))) verdim.push(vl);
+            if (vl.lteq(arr[i].duration)) break//don't attempt to use a note to form a group which has smaller duration than the note itself
+            if (bco.eq(vl) && (verdim.length==0 || !verdim[verdim.length-1].eq(vl))) verdim.push(vl);//shed duplicate group lengths and only consider the interval if it ends when the note ends.
           }
           var safej = i;
           var safeko = arr[i].duration;
-          for (var l=verdim.length-1;l>=0;l--) { 
+          for (var l=verdim.length-1;l>=0;l--) {//this part combines beam groups including the very last note by looking backwards from that note.
             var t=beamdex.length-1;
             var j=safej;
             var ko=safeko;
@@ -476,8 +476,8 @@ export class TimeSignature {
           beamdex.push([safej,i+1,safeko]);
         }
       }
-      co = co.minus(ml);
-      var row : Array<{beamed:boolean,notes:Array<Playable>}> = []
+      co = co.minus(ml);//now that the groups have been processed, convert them to the format that this function is expected to output.
+      var row : Array<{beamed:boolean,notes:Array<Playable>}> = []//same as beamdex, but in the desired output format. (including the notes themselves rather than indecies into the nodes, and also including unbeamed notes.)
       var unbeamed : Array<Playable> = [];
       var l = 0;
       for (var j=k;j<i;) {
