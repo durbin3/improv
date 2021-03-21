@@ -435,7 +435,7 @@ export class TimeSignature {
     arr = arr.concat([]);//shallow-copies arr so that when you modify it by adding rests to the end it won't modify the original list of nodes.
     while (i<arr.length) {//this iterates for each measure
       var k=i;//first index of the measure, inclusive (at the end of the following loop, i will be the last index of the measure, exclusive)
-      var beamdex:Array<[number,number,Duration]> = [];//current list of beamed notes
+      var beamdex:Array<[number,number,Duration,boolean]> = [];//current list of beamed notes
       for (;co.lt(ml);i++) {//this iterates over each note in the measure
         if (i==arr.length) {//this statement is responsible for padding the end of the note array with rests if you don't have enough notes to complete the measure
           arr.push(new Rest(new Duration(1,ml.minus(co).denominator)));//wonky here so that rests of irregular length are broken up into smaller rests that the code will know how to represent
@@ -459,21 +459,26 @@ export class TimeSignature {
           }
           var safej = i;
           var safeko = arr[i].duration;
-          for (var l=verdim.length-1;l>=0;l--) {//this part combines beam groups including the very last note by looking backwards from that note.
-            var t=beamdex.length-1;
-            var j=safej;
-            var ko=safeko;
-            while (ko.lt(verdim[l]) && t>=0 && beamdex[t][1]==j) {
-              ko = ko.plus(beamdex[t][2]);
-              j = beamdex[t--][0];
+          var isrest = arr[i].getTones().length==0;
+          if (!isrest) {
+            for (var l=verdim.length-1;l>=0;l--) {//this part combines beam groups including the very last note by looking backwards from that note.
+              var t=beamdex.length-1;
+              var j=safej;
+              var ko=safeko;
+              var lastrest = false;
+              while (ko.lt(verdim[l]) && t>=0 && beamdex[t][1]==j) {
+                ko = ko.plus(beamdex[t][2]);
+                lastrest = beamdex[t][3];
+                j = beamdex[t--][0];
+              }
+              if (ko.eq(verdim[l]) && !lastrest) {
+                beamdex.splice(t+1);
+                safej = j;
+                safeko = ko;
+              } else break;
             }
-            if (ko.eq(verdim[l])) {
-              beamdex.splice(t+1);
-              safej = j;
-              safeko = ko;
-            } else break;
           }
-          beamdex.push([safej,i+1,safeko]);
+          beamdex.push([safej,i+1,safeko,isrest]);
         }
       }
       co = co.minus(ml);//now that the groups have been processed, convert them to the format that this function is expected to output.
