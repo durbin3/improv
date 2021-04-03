@@ -1,4 +1,12 @@
 <p>music-generator works!</p>
 
 
-<app-stave></app-stave>
+<app-stave [sheet]="mainsheet"></app-stave>
+
+<div class="form-group">
+    <label for="file">Choose File</label>
+    <input type="file"
+           id="file"
+           (change)="handleFileInput($event)">
+</div>
+
