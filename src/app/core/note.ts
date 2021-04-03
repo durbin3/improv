@@ -143,8 +143,8 @@ export class Duration {
   denominator:number = 1;
   constructor(a0:number,a1:number) {
     var gc = gcd(a0,a1);
-    this.numerator=a0/gc;
-    this.denominator=a1/gc;
+    this.numerator = a0/gc;
+    this.denominator = a1/gc;
   }
   static fromString(name:string) : Duration {
     name = name.replace(/\s+/g, '').toLowerCase()
@@ -222,7 +222,7 @@ export class Tones {
   }
   toString(key?:{sharped:boolean,lettertones:Array<number>}) {
     var res = "";
-    for (var i=0;i<this.tones.length;i++) {
+    for (var i = 0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString(key);
       if (i!=this.tones.length-1) res = res+" ";
     }
@@ -309,7 +309,7 @@ export class Key {
       related_intervals = related_intervals.substring(1)+related_intervals[0];
     }
     var tones = [];
-    for (var i=0;i<7;i++) {
+    for (var i = 0;i<7;i++) {
       tones.push(root);
       root = root.plus(new Interval(parseInt(intervals[i])));
     }
@@ -326,7 +326,7 @@ export class Key {
   }
   toString() {
     var res = "key<";
-    for (var i=0;i<this.tones.length;i++) {
+    for (var i = 0;i<this.tones.length;i++) {
       res = res+this.tones[i].toString()+" ";
     }
     return res+"| enharmonic = "+this.enharmonic+">"
@@ -337,11 +337,11 @@ export class Key {
     if (this.enharmonic.sharped) {
       var amt = [0,1,2,3,4,5,6,7,undefined,undefined,undefined,undefined][fifths]!;
       var order = 'FCGDAEB';
-      for (var i=0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]++;
+      for (var i = 0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]++;
     } else {
       var amt = [0,undefined,undefined,undefined,undefined,7,6,5,4,3,2,1][fifths]!;
       var order = 'BEADGCF';
-      for (var i=0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]--;
+      for (var i = 0;i<amt;i++) toneindex['CDEFGAB'.indexOf(order[i])]--;
     }
     return toneindex;
   }
@@ -359,7 +359,7 @@ export class TimeSignature {
   }
   beats() : number {
     var a = 0;
-    for (var i=0;i<this.shelves[0].length;i++) a+=this.shelves[0][i];
+    for (var i = 0;i<this.shelves[0].length;i++) a+=this.shelves[0][i];
     return a;
   }
   toString() {
@@ -415,7 +415,7 @@ export class TimeSignature {
     var shelflength : Array<Array<Duration>> = [this.shelves[0].map(x => new Duration(x,this.base))];
     this.shelves.forEach((xs,j) => {//this constructs the duration corresponding to each entry in the shelf object.
       if (j==0) return;
-      var i=0;
+      var i = 0;
       shelflength.push(xs.map(y => {
         var sum = shelflength[j-1][i];y--,i++;
         for (;y>0;y--,i++) sum = sum.plus(shelflength[j-1][i]);
@@ -424,6 +424,7 @@ export class TimeSignature {
     });
     if (this.beats()*(8/this.base)>4) shelflength.splice(shelflength.length-1);//This line is responsible for ensuring you don't bridge the outermost grouping of notes (i.e. you don't bridge across the middle, or across either middle for triplet time (behaves weirdly for additive time signatures))
     var output : Array<Array<{beamed:boolean,notes:Array<Playable>}>> = [];
+
     var co = new Duration(0,1);//the current amount of duration into each measure that the currently considered list of nodes stretches into
     var i=0;//sentry var
     arr = arr.concat([]);//shallow-copies arr so that when you modify it by adding rests to the end it won't modify the original list of nodes.
@@ -444,7 +445,7 @@ export class TimeSignature {
               bco = bco.upmod(new Duration(1,this.base));
               vl = new Duration(1,this.base*Math.pow(2,-1-j));
             } else {
-              var u=0;
+              var u = 0;
               for (;bco.gt(shelflength[j][u]);u++) bco = bco.minus(shelflength[j][u]);
               vl = shelflength[j][u];
             }
@@ -479,7 +480,7 @@ export class TimeSignature {
       var row : Array<{beamed:boolean,notes:Array<Playable>}> = []//same as beamdex, but in the desired output format. (including the notes themselves rather than indecies into the nodes, and also including unbeamed notes.)
       var unbeamed : Array<Playable> = [];
       var l = 0;
-      for (var j=k;j<i;) {
+      for (var j = k;j<i;) {
         if (l<beamdex.length && beamdex[l][0]==j) {
           if (beamdex[l][1]==beamdex[l][0]+1) l++
           else {
@@ -531,7 +532,7 @@ export class Sheet {
       }
       var notelist = x.reduce((umu, y) => {
         var blah = "";
-        for (var i=0;i<y.notes.length;i++) {
+        for (var i = 0;i<y.notes.length;i++) {
           blah = blah+y.notes[i].toString(tonerepr);
           if (i!=y.notes.length-1) blah = blah+", ";
         }
@@ -569,7 +570,7 @@ export class Sheet {
   play(): void {
     var synth = new Tonejs.PolySynth().toDestination();
     var blah = new Duration(0,1);
-    for (var i=0;i<this.notes.length;i++) {
+    for (var i = 0;i<this.notes.length;i++) {
       synth.triggerAttackRelease(this.notes[i].getTones().map(tone => tone.toString()), this.notes[i].duration.tonejs_repr(), "+"+blah.tonejs_transport_repr());
       blah = blah.plus(this.notes[i].duration);
     }
